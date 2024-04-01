@@ -1,8 +1,11 @@
 package main
 
 import (
+	"ImageCut/file"
+	"ImageCut/img"
+	"ImageCut/sprite"
+	"ImageCut/vector"
 	"fmt"
-	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -10,72 +13,36 @@ import (
 	"path/filepath"
 )
 
-type Parameters struct {
-	path       string
-	output     string
-	gap        int
-	imageSize  Vec2
-	spriteSize Vec2
-}
-
-type Vec2 struct {
-	x int
-	y int
-}
-
-func (p *Parameters) RequestParams() {
-	fmt.Println("Enter the path to the image file:")
-	_, err := fmt.Scanln(&p.path)
-
-	dir, err := filepath.Abs(p.path)
-
-	if err != nil {
-		fmt.Println("Error reading the path to the image file.")
-		os.Exit(1)
-	}
-
-	p.path = dir
-
-	if err != nil {
-		fmt.Println("Error reading the path to the image file.")
-		os.Exit(1)
-	}
-
-	fmt.Println("Enter the path to the output folder:")
-	_, err = fmt.Scanln(&p.output)
-
-	fmt.Println("Gap between sprites (in pixels):")
-	_, err = fmt.Scanln(&p.gap)
-
-	fmt.Println("Enter the sprite size (width, in pixels):")
-	_, err = fmt.Scanln(&p.spriteSize.x)
-
-	fmt.Println("Enter the sprite size (height, in pixels):")
-	_, err = fmt.Scanln(&p.spriteSize.y)
-}
-
 func main() {
 	fmt.Println("Sprites Cutout Tool")
 
-	var p = Parameters{}
-	p.RequestParams()
+	spr := sprite.Sprite{}
+	//spr.Initialize()
+	spr.Path = "./sprites.png"
+	spr.Output = "./portraits"
 
-	if !checkFileExists(p.path) {
-		fmt.Println("File not found.")
-		os.Exit(1)
-	}
-
-	dimensions, err := GetImageSize(p.path)
+	path, err := filepath.Abs(spr.Path)
 
 	if err != nil {
-		fmt.Println("Error reading the image metadata.")
-		fmt.Println(err)
+		fmt.Println("Error on get sprite path.")
 		os.Exit(1)
 	}
 
-	p.imageSize = dimensions
+	if !file.Exists(path) {
+		fmt.Println("Sprite not found.")
+		os.Exit(1)
+	}
 
-	outputPath, err := filepath.Abs(fmt.Sprintf("./%s", p.output))
+	sprImg := img.Image{}
+	err = sprImg.Open(spr.Path)
+	defer sprImg.Close()
+
+	if err != nil {
+		fmt.Println("Error on open sprite image.")
+		os.Exit(1)
+	}
+
+	outputPath, err := filepath.Abs(fmt.Sprintf("./%s", spr.Output))
 
 	if err != nil {
 		fmt.Println("Error reading the output path.")
@@ -89,39 +56,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Path to the image file:", p.path)
-}
+	for i := 0; i < 4; i++ {
+		imgSizeX := 74
+		gap := 6
+		x := imgSizeX * i
 
-func checkFileExists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
+		imgSizeY := 74
 
-	return true
-}
-
-func GetImageSize(path string) (Vec2, error) {
-	file, err := os.Open(path)
-
-	if err != nil {
-		return Vec2{}, err
-	}
-
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			fmt.Println("Error closing the file.")
+		if x > 0 {
+			x += gap
 		}
-	}(file)
 
-	imageConfig, _, err := image.DecodeConfig(file)
-	if err != nil {
-		return Vec2{}, err
+		sprImg.CutArea(vector.Vec4{
+			x,
+			imgSizeY,
+			x + imgSizeX,
+			imgSizeY + imgSizeY + gap,
+		}, &spr)
 	}
-
-	return Vec2{imageConfig.Width, imageConfig.Height}, nil
-}
-
-func CutImageArea() {
-
 }
